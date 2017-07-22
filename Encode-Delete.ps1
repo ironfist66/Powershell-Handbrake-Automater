@@ -39,10 +39,10 @@ $radarrAPI = ""
 
 
 
-# CHECK HNADBRAKE ISN'T ALREADY RUNNING
+# CHECK HANDBRAKE ISN'T ALREADY RUNNING
 # This checks to make sure that handbrake CLI isn't already running so that we don't have
 # multiple handbrake conversions going on at the same time.
-# it checks every 2 seconds until handbrake CLI is no longer running.
+# it checks every 20 seconds until handbrake CLI is no longer running.
 
 
 do { Start-Sleep -s 20 } until ((get-process HandBrakeCLI -ea SilentlyContinue) -eq $Null)
