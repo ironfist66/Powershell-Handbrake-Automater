@@ -2,12 +2,9 @@
 
 This script is to automate re-encoding downloads before sending to sonarr for import.
 
-To use this script, first run Setup.ps1 from an elevated powershell session.  
-You may need to use 'Set-ExecutionPolicy Unrestricted' before windows will allow the script to be run.
-Alternatively, you can open the script using a .bat file and using the -ExecutionPolicy Bypass parameter.
-(an example is in this repo)
+To use this script, first run Setup.ps1 from an elevated powershell session.
 
-The Setup.ps1 will create a new registry key with 2 DWords inside that the script uses to check if it is being run or not.
+The Setup.ps1 will create a new registry key with 2 DWords inside that the script uses to check if it is being run or not, and sets the permissions to Builin\Users - Full Control
 
 Open the Encode-Delete-Github.ps1 and change the details at the top to your own,
 
