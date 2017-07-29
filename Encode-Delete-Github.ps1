@@ -53,9 +53,9 @@ $decimal = 255 # <----------- decimal values available via google or here: https
 
 do { $randomtime = Get-Random -Minimum 100 -Maximum 20000
 Start-Sleep -m $randomtime } 
-until ((Get-ItemProperty 'HKLM:\SOFTWARE\Scripts' -name Running | select -exp Running) -eq 0)
+until ((Get-ItemProperty 'HKCU:\SOFTWARE\Scripts' -name Running | select -exp Running) -eq 0)
 
-Set-ItemProperty HKLM:\SOFTWARE\Scripts -Name Running -Value 1
+Set-ItemProperty HKCU:\SOFTWARE\Scripts -Name Running -Value 1
 
 
 # _______________________________________________________________________________________ #
@@ -73,12 +73,15 @@ Set-ItemProperty HKLM:\SOFTWARE\Scripts -Name Running -Value 1
 Get-ChildItem $sourcefolder -Filter *.txt -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
 Get-ChildItem $sourcefolder -Filter *.nfo -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
 
-if ($recursive -eq 1) { $filelist = Get-ChildItem $sourcefolder -Filter *.* -Recurse -Exclude "*In Progress*" | where { ! $_.PSIsContainer } | Where {$_.FullName -notlike "*\In Progress\*"}
+if ($recursive -eq 1) { $filelist = Get-ChildItem $sourcefolder -Filter *.* -Recurse -Exclude "*In Progress*", "*!ut*" | where { ! $_.PSIsContainer } | Where {$_.FullName -notlike "*\In Progress\*"}
 $num = $filelist | measure
 $filecount = $num.count }
-else { $filelist = Get-ChildItem $sourcefolder -Filter *.* -Exclude "*In Progress*" | where { ! $_.PSIsContainer } | Where {$_.FullName -notlike "*\In Progress\*"}
+else { $filelist = Get-ChildItem $sourcefolder -Filter *.* -Exclude "*In Progress*", "*!ut*" | where { ! $_.PSIsContainer } | Where {$_.FullName -notlike "*\In Progress\*"}
 $num = $filelist | measure
 $filecount = $num.count }
+
+if ($num.count -eq "0"){ Set-ItemProperty HKCU:\SOFTWARE\Scripts -Name Running -Value 0 
+Exit }
 
 $i = 0;
 
@@ -86,7 +89,7 @@ ForEach ($file in $filelist)
 {
     $i++;
 
-    $randomtime = Get-Random -Minimum 10 -Maximum 200
+    $randomtime = Get-Random -Minimum 1000 -Maximum 4000
     Start-Sleep -m $randomtime
 
     $progressroot = $sourcefolder + "\" + "In Progress"
@@ -100,17 +103,32 @@ ForEach ($file in $filelist)
     New-Item $progressfolder -type Directory
 
     $movefile = $file.DirectoryName + "\" + $file.BaseName + $file.Extension;
-    Move-Item -LiteralPath $movefile -Destination $progressfolder 
+    Move-Item -literalpath $movefile -Destination $progressfolder 
+}
 
-    Get-ChildItem $progressfolder -Filter *.*
+Get-ChildItem $sourcefolder -Recurse | Where-Object -FilterScript {$_.PSIsContainer -eq $True} | Where-Object -FilterScript {($_.GetFiles().Count -eq 0) -and $_.GetDirectories().Count -eq 0} | foreach ($_) {remove-item -LiteralPath $_.fullname}
+
+$progressroot = $sourcefolder + "\" + "In Progress"
+$filelist = Get-ChildItem $progressroot -Filter *.* -Recurse | where { ! $_.PSIsContainer }
+$num = $filelist | measure
+$filecount = $num.count
+
+$i = 0;
+
+ForEach ($file in $filelist)
+{
+    $i++;
+
+    $randomtime = Get-Random -Minimum 100 -Maximum 4000
+    Start-Sleep -m $randomtime
 
     do { $randomtime = Get-Random -Minimum 10 -Maximum 2000
     Start-Sleep -m $randomtime } 
-    until ((Get-ItemProperty 'HKLM:\SOFTWARE\Scripts' -Name Encoding | select -exp Encoding) -eq 0)
+    until ((Get-ItemProperty 'HKCU:\SOFTWARE\Scripts' -Name Encoding | select -exp Encoding) -eq 0)
 
-    Set-ItemProperty HKLM:\SOFTWARE\Scripts -Name Encoding -Value 1
+    Set-ItemProperty HKCU:\SOFTWARE\Scripts -Name Encoding -Value 1
 
-    $oldfile = $progressfolder + "\" + $file.BaseName + $file.Extension;
+    $oldfile = $file.DirectoryName + "\" + $file.BaseName + $file.Extension;
     $newfile = $destinationfolder + "\" + $file.BaseName + ".$newfileext";
     $oldfilebase = $file.BaseName + $file.Extension;
 
@@ -140,7 +158,7 @@ ForEach ($file in $filelist)
     $output6 = "                    `| Deleted File:  `| $oldfile `r`n"
     $output6 | Out-File -Append $destinationlog }
     
-    Set-ItemProperty HKLM:\SOFTWARE\Scripts -Name Encoding -Value 0
+    Set-ItemProperty HKCU:\SOFTWARE\Scripts -Name Encoding -Value 0
 }
 
 
@@ -175,7 +193,7 @@ Invoke-RestMethod -Uri $url -Method Post -Body $json -Headers @{"X-Api-Key"="$so
 # _______________________________________________________________________________________ #
 
 
-Set-ItemProperty HKLM:\SOFTWARE\Scripts -Name Running -Value 0
+Set-ItemProperty HKCU:\SOFTWARE\Scripts -Name Running -Value 0
 Get-ChildItem $sourcefolder -Recurse | Where-Object -FilterScript {$_.PSIsContainer -eq $True} | Where-Object -FilterScript {($_.GetFiles().Count -eq 0) -and $_.GetDirectories().Count -eq 0} | foreach ($_) {remove-item $_.fullname}
 Get-ChildItem $sourcefolder -Recurse | Where-Object -FilterScript {$_.PSIsContainer -eq $True} | Where-Object -FilterScript {($_.GetFiles().Count -eq 0) -and $_.GetDirectories().Count -eq 0} | foreach ($_) {remove-item $_.fullname}
 
