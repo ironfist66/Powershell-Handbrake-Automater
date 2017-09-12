@@ -20,14 +20,11 @@ $recursive = 0 # <---------------------- set to 1 to enable recursive source fol
 $remold = 0 # <------------------------- set to 1 to delete source files after re-encode
 $clrrcl = 0 # <------------------------- set to 1 to clear recycle bin after script finishes
 
-$sonarr = "0"    # <------ set these to 1 if you want them search for content after conversion.
-$radarr = "0"    # <--/    Then set the relevant fields below.
+$sonarr = "0"    # <------ set this to 1 if you want sonarr to search for content after conversion then set the relevant fields below.
 
 $sonarrURL = "http://localhost:8989"
-$radarrURL = "http://localhost:8989"
 
 $sonarrAPI = "YOUR API HERE"
-$radarrAPI = "YOUR API HERE"
 
 $changeaffinity = 0 # <------ if you want to change the affinity of handbrakeCLI set this to 1 and change the decimal values below
 $decimal = 255 # <----------- decimal values available via google or here: https://stackoverflow.com/questions/19187241/change-affinity-of-process-with-windows-script
@@ -45,28 +42,9 @@ $decimal = 255 # <----------- decimal values available via google or here: https
 #                                                                                         #
 #                                      SCRIPT START                                       #
 # _______________________________________________________________________________________ #
-#                                                                                         #
-# CHECK SCRIPT ISN'T ALREADY RUNNING                                                      #
-#                                                                                         #
-# This checks to make sure that the script isn't already running so that we don't have    #
-# multiple powershell re-encodes happening at the same time.                              #
-# _______________________________________________________________________________________ #
 
 
 if ((Test-Path $lockdest\running.lock) -eq $false){New-Item $lockdest\running.lock -type file} else { exit }
-
-
-# _______________________________________________________________________________________ #
-#                                                                                         #
-# CHECK FOR FILES AND CONVERT                                                             #
-#                                                                                         #
-# This will delete all .txt and .nfo files, then make a list of all remaining files to    #
-# give to handbrake, using the source and destination fields set above.                   #
-# It also checks to make sure handbrake isn't already running, and creates a log of       #
-# actions taken (the log file set above)                                                  #
-# Afterwards, it deletes the source (if set above)                                        #
-# _______________________________________________________________________________________ #
-
 
 Get-ChildItem $sourcefolder -Filter *.jpg -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
 Get-ChildItem $sourcefolder -Filter *.jpeg -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
@@ -160,18 +138,6 @@ ForEach ($file in $filelist)
     remove-item -LiteralPath $lockdest\encoding.lock -Force
 }
 
-
-# _______________________________________________________________________________________ #
-#                                                                                         #
-# MEDIA MANAGER INTEGRATION SCRIPTS                                                       #
-#                                                                                         #
-# This part of the script tells the programs set above to search their folders for        #
-# new content.                                                                            #
-# You may need to set your media manager to look at $destinationfolder if it              #
-# doesn't already.                                                                        #
-# _______________________________________________________________________________________ #
-
-
 if ($sonarr -eq 1){
 
 $url = "$sonarrURL/api/command"
@@ -180,17 +146,6 @@ $json = "{ ""name"": ""downloadedepisodesscan"" }"
 Write-Host "Publishing update $version ($branch) to: $url"
 Invoke-RestMethod -Uri $url -Method Post -Body $json -Headers @{"X-Api-Key"="$sonarrAPI"}
 }
-
-
-# _______________________________________________________________________________________ #
-#                                                                                         #
-# CLEANUP                                                                                 #
-#                                                                                         #
-# This section deletes any empty folders created during the re-encode, clears the recycle # 
-# bin (if set) and sets the script registry value back to 0 so the script can be run      #
-# again.                                                                                  #
-# _______________________________________________________________________________________ #
-
 
 remove-item -LiteralPath $lockdest\running.lock -Force
 Get-ChildItem $sourcefolder -Recurse | Where-Object -FilterScript {$_.PSIsContainer -eq $True} | Where-Object -FilterScript {($_.GetFiles().Count -eq 0) -and $_.GetDirectories().Count -eq 0} | foreach ($_) {remove-item $_.fullname}
