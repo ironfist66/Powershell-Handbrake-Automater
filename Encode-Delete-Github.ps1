@@ -13,6 +13,8 @@ $sourcefolder = "C:\YOUR\SOURCE\FOLDER\HERE"
 $destinationfolder = "C:\YOUR\OUTPUT\FOLDER\HERE"
 $destinationlog = "C:\YOUR\LOGFILE\HERE.txt"
 
+$lockdest = "C:\YOUR\LOCK\FILE\HERE" # <----- This is where the .lock files go that allow the script to see if it is already running or encoding
+
 $newfileext = "mkv" # <----------------- choose mkv or mp4 
 $recursive = 0 # <---------------------- set to 1 to enable recursive source folder scan
 $remold = 0 # <------------------------- set to 1 to delete source files after re-encode
@@ -51,11 +53,7 @@ $decimal = 255 # <----------- decimal values available via google or here: https
 # _______________________________________________________________________________________ #
 
 
-do { $randomtime = Get-Random -Minimum 100 -Maximum 20000
-Start-Sleep -m $randomtime } 
-until ((Get-ItemProperty 'HKCU:\SOFTWARE\Scripts' -name Running | select -exp Running) -eq 0)
-
-Set-ItemProperty HKCU:\SOFTWARE\Scripts -Name Running -Value 1
+if ((Test-Path $lockdest\running.lock) -eq $false){New-Item $lockdest\running.lock -type file} else { exit }
 
 
 # _______________________________________________________________________________________ #
@@ -70,8 +68,12 @@ Set-ItemProperty HKCU:\SOFTWARE\Scripts -Name Running -Value 1
 # _______________________________________________________________________________________ #
 
 
-Get-ChildItem $sourcefolder -Filter *.txt -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
+Get-ChildItem $sourcefolder -Filter *.jpg -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
+Get-ChildItem $sourcefolder -Filter *.jpeg -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
+Get-ChildItem $sourcefolder -Filter *.png -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
 Get-ChildItem $sourcefolder -Filter *.nfo -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
+Get-ChildItem $sourcefolder -Filter *.txt -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
+Get-ChildItem $sourcefolder -Filter RARBG.mp4 -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
 
 if ($recursive -eq 1) { $filelist = Get-ChildItem $sourcefolder -Filter *.* -Recurse -Exclude "*In Progress*", "*!ut*" | where { ! $_.PSIsContainer } | Where {$_.FullName -notlike "*\In Progress\*"}
 $num = $filelist | measure
@@ -80,7 +82,7 @@ else { $filelist = Get-ChildItem $sourcefolder -Filter *.* -Exclude "*In Progres
 $num = $filelist | measure
 $filecount = $num.count }
 
-if ($num.count -eq "0"){ Set-ItemProperty HKCU:\SOFTWARE\Scripts -Name Running -Value 0 
+if ($num.count -eq "0"){ remove-item -LiteralPath $lockdest\running.lock -Force
 Exit }
 
 $i = 0;
@@ -119,14 +121,11 @@ ForEach ($file in $filelist)
 {
     $i++;
 
-    $randomtime = Get-Random -Minimum 100 -Maximum 4000
-    Start-Sleep -m $randomtime
-
     do { $randomtime = Get-Random -Minimum 10 -Maximum 2000
     Start-Sleep -m $randomtime } 
-    until ((Get-ItemProperty 'HKCU:\SOFTWARE\Scripts' -Name Encoding | select -exp Encoding) -eq 0)
+    until ((Test-Path $lockdest\encoding.lock) -eq $false)
 
-    Set-ItemProperty HKCU:\SOFTWARE\Scripts -Name Encoding -Value 1
+    New-Item $lockdest\encoding.lock -type file
 
     $oldfile = $file.DirectoryName + "\" + $file.BaseName + $file.Extension;
     $newfile = $destinationfolder + "\" + $file.BaseName + ".$newfileext";
@@ -158,7 +157,7 @@ ForEach ($file in $filelist)
     $output6 = "                    `| Deleted File:  `| $oldfile `r`n"
     $output6 | Out-File -Append $destinationlog }
     
-    Set-ItemProperty HKCU:\SOFTWARE\Scripts -Name Encoding -Value 0
+    remove-item -LiteralPath $lockdest\encoding.lock -Force
 }
 
 
@@ -193,7 +192,7 @@ Invoke-RestMethod -Uri $url -Method Post -Body $json -Headers @{"X-Api-Key"="$so
 # _______________________________________________________________________________________ #
 
 
-Set-ItemProperty HKCU:\SOFTWARE\Scripts -Name Running -Value 0
+remove-item -LiteralPath $lockdest\running.lock -Force
 Get-ChildItem $sourcefolder -Recurse | Where-Object -FilterScript {$_.PSIsContainer -eq $True} | Where-Object -FilterScript {($_.GetFiles().Count -eq 0) -and $_.GetDirectories().Count -eq 0} | foreach ($_) {remove-item $_.fullname}
 Get-ChildItem $sourcefolder -Recurse | Where-Object -FilterScript {$_.PSIsContainer -eq $True} | Where-Object -FilterScript {($_.GetFiles().Count -eq 0) -and $_.GetDirectories().Count -eq 0} | foreach ($_) {remove-item $_.fullname}
 

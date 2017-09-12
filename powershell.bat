@@ -1,1 +1,0 @@
-start powershell -WindowStyle Hidden -ExecutionPolicy ByPass C:\scripts\Encode-Delete-Github.ps1
