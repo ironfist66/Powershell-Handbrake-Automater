@@ -64,7 +64,7 @@ Set these to 1 to enable the feature. 0 will disable it
 <p>
 
 For use with `$sonarr`  
-   ``$sonarrurl`` - URL for sonarr
+   ``$sonarrurl`` - URL for sonarr  
    ``$sonarrapi`` - API for your sonarr installation
 	
 For use with `$changeaffinity`  
