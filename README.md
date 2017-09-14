@@ -24,7 +24,7 @@ It also has the option to import a profile from the Handbrake GUI application if
 
 
 ## Variables Available ##  
-#### Required variables
+#### Required Variables
 
 <details>
 	<summary>These are required for the script to work</summary>
@@ -40,10 +40,10 @@ It also has the option to import a profile from the Handbrake GUI application if
 </p>
 </details>
 
-#### Optional variables
+#### Optional Features
 
 <details>
-	<summary>These are not required, but must be set to 1 or 0</summary>
+	<summary>These variables are not required, but must be set to 1 or 0</summary>
 <p>
 	
 Set these to 1 to enable the feature. 0 will disable it  
@@ -60,15 +60,15 @@ Set these to 1 to enable the feature. 0 will disable it
 
 
 <details>
-	<summary>These are required for some of the optional variables above</summary>
+	<summary>These are required if some optional features are enabled</summary>
 <p>
 
 For use with `$sonarr`  
-   ``$sonarrurl`` - URL for sonarr (required if $sonarr enabled)  
-   ``$sonarrapi`` - API for your sonarr installation (required if $sonarr enabled)  
+   ``$sonarrurl`` - URL for sonarr
+   ``$sonarrapi`` - API for your sonarr installation
 	
 For use with `$changeaffinity`  
-   ``$decimal`` - choose which threads to use for the above (required if $changeaffinity enabled)  
+   ``$decimal`` - choose which threads to use for the above
 
 For use with `$import`  
    ``$handpro`` - name of the handbrake GUI profile  
