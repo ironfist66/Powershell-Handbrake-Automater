@@ -24,7 +24,7 @@ It also has the option to import a profile from the Handbrake GUI application if
 
 
 ## Variables Available ##  
-##### Required variables
+#### Required variables
 
 <details>
 	<summary>These are required for the script to work</summary>
@@ -40,7 +40,7 @@ It also has the option to import a profile from the Handbrake GUI application if
 </p>
 </details>
 
-##### Optional variables
+#### Optional variables
 
 <details>
 	<summary>These are not required, but must be set to 1 or 0</summary>
@@ -51,13 +51,27 @@ Set these to 1 to enable the feature. 0 will disable it
 ```$remold``` - remove source files after re-encode has completed  
 ```$clrrcl``` - clear recycle bin after script has finished  
 ```$sonarr``` - enable sonarr episode scan after script has finished  
-   ```$sonarrurl``` - URL for sonarr (required if $sonarr enabled)  
-   ```$sonarrapi``` - API for your sonarr installation (required if $sonarr enabled)  
 ```$changeaffinity``` - change the processor affinity for handbrake CLI  
-   ```$decimal``` - choose which threads to use for the above (required if $changeaffinity enabled)  
 ```$import``` - import handbrake GUI profile. This overrides the $handargs variable  
-   ```$handpro``` - name of the handbrake GUI profile  
 ```$hidden``` - hide the handbrake CLI window when re-encoding files  
 
+</p>
+</details>
+
+
+<details>
+	<summary>These are required for some of the optional variables above</summary>
+<p>
+
+For use with `$sonarr`  
+   ``$sonarrurl`` - URL for sonarr (required if $sonarr enabled)  
+   ``$sonarrapi`` - API for your sonarr installation (required if $sonarr enabled)  
+	
+For use with `$changeaffinity`  
+   ``$decimal`` - choose which threads to use for the above (required if $changeaffinity enabled)  
+
+For use with `$import`  
+   ``$handpro`` - name of the handbrake GUI profile  
+	
 </p>
 </details>
