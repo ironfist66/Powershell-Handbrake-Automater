@@ -4,8 +4,12 @@
 # _______________________________________________________________________________________ #
 #                                                                                         #
 # These are the variables that you need to set before the script can work.                #
-# I have tried to get as many up here as possible so that you don't have to search        #
-# through the script to change anything.                                                  #
+# If there is variable missing or a feature you want, please log an issue github          #
+#                                                                                         #
+# If you are using uTorrent, make sure that it appends files with !ut whilst downloading  #
+# If you are using another download client, it is best advised to download to a different #
+# folder than the source set below, and have the downloader move the file once completed  #
+#                                                                                         #
 # _______________________________________________________________________________________ #
 
 
@@ -15,26 +19,33 @@ $destinationlog = "C:\YOUR\LOGFILE\HERE.txt"
 
 $lockdest = "C:\YOUR\LOCK\FILE\HERE" # <----- This is where the .lock files go that allow the script to see if it is already running or encoding
 
-$newfileext = "mkv" # <----------------- choose mkv or mp4 
-$recursive = 0 # <---------------------- set to 1 to enable recursive source folder scan
-$remold = 0 # <------------------------- set to 1 to delete source files after re-encode
-$clrrcl = 0 # <------------------------- set to 1 to clear recycle bin after script finishes
-
-$sonarr = "0"    # <------ set this to 1 if you want sonarr to search for content after conversion then set the relevant fields below.
+$newfileext = "mkv" # <------ choose mkv or mp4 
+$recursive = 0 # <----------- set to 1 to enable recursive source folder scan
+$remold = 0 # <-------------- set to 1 to delete source files after re-encode
+$clrrcl = 0 # <-------------- set to 1 to clear recycle bin after script finishes
+$sonarr = "0" # <------------ set this to 1 if you want sonarr to search for content after conversion then set the relevant fields below.
 
 $sonarrURL = "http://localhost:8989"
-
 $sonarrAPI = "YOUR API HERE"
 
 $changeaffinity = 0 # <------ if you want to change the affinity of handbrakeCLI set this to 1 and change the decimal values below
 $decimal = 255 # <----------- decimal values available via google or here: https://stackoverflow.com/questions/19187241/change-affinity-of-process-with-windows-script
 #                        \--- This will vary depending on how many cores/threads your processor has. i.e. a Ryzen 8C/16T CPU will be 65535 but an i7 4C/8T CPU will be 255 for all cores
 
-# HANDBRAKE ARGUMENTS AND SETTINGS MUST BE SET BELOW. THESE CANNOT BE MADE IN TO A
-# VARIABLE WITHOUT BREAKING THE SCRIPT
-# IT IS MARKED UP BELOW FOR EASY SPOTTING
+# HANDBRAKE ARGUMENTS
+# Set the arguments below, leaving out the imput and output file options (these are set below on a dynamic basis within the script)
+# see handbrake cli documentation here: https://handbrake.fr/docs/en/latest/cli/cli-guide.html
 
+$handargs = ""
 
+# IMPORT HANDBRAKE PROFILE FROM GUI
+# Alternatively, instead of setting the arguments manually, you can import a profile that you have already saved within the normal handbrake application
+# Set the below option to "1" and then set the name of the profile you want to use. Make sure the profile name has no spaces, and enter it exactly as it appears in handbrake
+
+$import = 0
+$handpro = ""
+
+$hidden = 0 # <-------------- Set this to 1 to hide the handbrake CLI window. If you want to watch it whirring away, keep set to 0
 
 
 
@@ -112,13 +123,19 @@ ForEach ($file in $filelist)
     $date = Get-Date    
     $output1 = "-------------------------------------------------------------------------------"
     $output2 = "Handbrake Automated Encoding `r`n"
-    $output3 = "$date `| Processing:    `| $oldfilebase"                                          #        _________________  | |  _________________
-                                                                                                  #                         \ | | /
-    $output1 | Out-File -Append $destinationlog                                                   #                         | | | |
-    $output2 | Out-File -Append $destinationlog                                                   #                         V V V V
-    $output3 | Out-File -Append $destinationlog                                                   #              V !HANDBRAKE ARGUMENTS HERE! V
-                                                                                                  #       V !LEAVE `"oldfile`" AND `"newfile`" HERE! V 
-    Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -WindowStyle Hidden -ArgumentList "-i `"$oldfile`" -o `"$newfile`""
+    $output3 = "$date `| Processing:    `| $oldfilebase"
+    $output1 | Out-File -Append $destinationlog
+    $output2 | Out-File -Append $destinationlog
+    $output3 | Out-File -Append $destinationlog
+    
+    if ($hidden -eq "1") {
+        if ($import -eq 0) { Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -WindowStyle Hidden -ArgumentList "$handargs -i `"$oldfile`" -o `"$newfile`"" }
+        else { Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -WindowStyle Hidden -ArgumentList "--preset-import-gui --preset $handpro -i `"$oldfile`" -o `"$newfile`"" }
+        }
+    else {
+        if ($import -eq 0) { Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -ArgumentList "$handargs -i `"$oldfile`" -o `"$newfile`"" }
+        else { Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -ArgumentList "--preset-import-gui --preset $handpro -i `"$oldfile`" -o `"$newfile`"" }
+        }
     
     Start-Sleep -s 1
 
@@ -140,11 +157,17 @@ ForEach ($file in $filelist)
 
 if ($sonarr -eq 1){
 
-$url = "$sonarrURL/api/command"
-$json = "{ ""name"": ""downloadedepisodesscan"" }"
-
-Write-Host "Publishing update $version ($branch) to: $url"
-Invoke-RestMethod -Uri $url -Method Post -Body $json -Headers @{"X-Api-Key"="$sonarrAPI"}
+    $filelist2 = Get-ChildItem $destinationfolder -Filter *.* -Recurse | where { ! $_.PSIsContainer }
+    ForEach ($file in $filelist2)
+    {
+        $url = "$sonarrURL/api/command"
+        $json1 = "{ ""name"": ""downloadedepisodesscan"",""path"": """
+        $json2 = """}"
+        $encoded = $file.DirectoryName + "\" + $file.BaseName + $file.Extension;
+        $escaped = $encoded.replace ('\','\\')
+        $jsoncomplete = $json1 + $escaped + $json2
+        Invoke-RestMethod -Uri $url -Method Post -Body $jsoncomplete -Headers @{"X-Api-Key"="$sonarrAPI"}
+    }
 }
 
 remove-item -LiteralPath $lockdest\running.lock -Force
