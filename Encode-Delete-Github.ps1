@@ -32,20 +32,29 @@ $changeaffinity = 0 # <------ if you want to change the affinity of handbrakeCLI
 $decimal = 255 # <----------- decimal values available via google or here: https://stackoverflow.com/questions/19187241/change-affinity-of-process-with-windows-script
 #                        \--- This will vary depending on how many cores/threads your processor has. i.e. a Ryzen 8C/16T CPU will be 65535 but an i7 4C/8T CPU will be 255 for all cores
 
-# HANDBRAKE ARGUMENTS
-# Set the arguments below, leaving out the imput and output file options (these are set below on a dynamic basis within the script)
-# see handbrake cli documentation here: https://handbrake.fr/docs/en/latest/cli/cli-guide.html
+<#
+
+HANDBRAKE ARGUMENTS
+Set the arguments below, leaving out the imput and output file options (these are set below on a dynamic basis within the script)
+see handbrake cli documentation here: https://handbrake.fr/docs/en/latest/cli/cli-guide.html
+
+#>
 
 $handargs = ""
 
-# IMPORT HANDBRAKE PROFILE FROM GUI
-# Alternatively, instead of setting the arguments manually, you can import a profile that you have already saved within the normal handbrake application
-# Set the below option to "1" and then set the name of the profile you want to use. Make sure the profile name has no spaces, and enter it exactly as it appears in handbrake
+<# 
+
+IMPORT HANDBRAKE PROFILE FROM GUI
+Alternatively, instead of setting the arguments manually, you can import a profile that you have already saved within the normal handbrake application
+Set the below option to "1" and then set the name of the profile you want to use. Make sure the profile name has no spaces, and enter it exactly as it appears in handbrake
+
+#>
 
 $import = 0
-$handpro = ""
+$profile = ""
 
 $hidden = 0 # <-------------- Set this to 1 to hide the handbrake CLI window. If you want to watch it whirring away, keep set to 0
+$notifications = 0 # <------- Set this to 1 to enable Windows 10 Toast Notifications (requires Creators Update to work properly)
 
 
 
@@ -54,15 +63,16 @@ $hidden = 0 # <-------------- Set this to 1 to hide the handbrake CLI window. If
 #                                      SCRIPT START                                       #
 # _______________________________________________________________________________________ #
 
+if ($notifications -eq 1){
+    if ((Test-Path "C:\Program Files\WindowsPowerShell\Modules\BurntToast") -eq $false){ Install-Module Burnttoast }
+    }
+
 
 if ((Test-Path $lockdest\running.lock) -eq $false){New-Item $lockdest\running.lock -type file} else { exit }
 
-Get-ChildItem $sourcefolder -Filter *.jpg -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
-Get-ChildItem $sourcefolder -Filter *.jpeg -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
-Get-ChildItem $sourcefolder -Filter *.png -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
-Get-ChildItem $sourcefolder -Filter *.nfo -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
-Get-ChildItem $sourcefolder -Filter *.txt -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
-Get-ChildItem $sourcefolder -Filter RARBG.mp4 -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.fullname}
+$excluded = @("*.mp4", "*.mkv", "*.avi", "*.mpeg4", "*.ts", "*.!ut")
+Get-ChildItem $sourcefolder\* -Exclude $excluded -Recurse | where { ! $_.PSIsContainer } | foreach ($_) {Remove-Item -LiteralPath $_.FullName -Force}
+Get-ChildItem $sourcefolder -Filter "RARBG.mp4" -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.FullName -Force}
 
 if ($recursive -eq 1) { $filelist = Get-ChildItem $sourcefolder -Filter *.* -Recurse -Exclude "*In Progress*", "*!ut*" | where { ! $_.PSIsContainer } | Where {$_.FullName -notlike "*\In Progress\*"}
 $num = $filelist | measure
@@ -74,6 +84,9 @@ $filecount = $num.count }
 if ($num.count -eq "0"){ remove-item -LiteralPath $lockdest\running.lock -Force
 Exit }
 
+$noth1 = New-BTHeader -Id 000123 -Title "New Content!"
+$noth2 = New-BTHeader -Id 000123 -Title "Complete"
+$uid = 000124
 $i = 0;
 
 ForEach ($file in $filelist)
@@ -94,7 +107,16 @@ ForEach ($file in $filelist)
     New-Item $progressfolder -type Directory
 
     $movefile = $file.DirectoryName + "\" + $file.BaseName + $file.Extension;
-    Move-Item -literalpath $movefile -Destination $progressfolder 
+    Move-Item -literalpath $movefile -Destination $progressfolder
+    
+    if ($notifications -eq 1) {
+        $count = "$i" + "/" + "$filecount"
+        $dec = $i / ($filecount + 1)
+        $perc = "{0:p0}" -f $dec
+        $bar = New-BTProgressBar -Status "Moving file $count" -Indeterminate -ValueDisplay $perc
+        if ($filecount -eq 1) { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Thing", “Moving it...” -ProgressBar $bar -UniqueIdentifier "$uid" }
+        else { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Things", “Moving them...” -ProgressBar $bar -UniqueIdentifier "$uid" -AppLogo }
+        } 
 }
 
 Get-ChildItem $sourcefolder -Recurse | Where-Object -FilterScript {$_.PSIsContainer -eq $True} | Where-Object -FilterScript {($_.GetFiles().Count -eq 0) -and $_.GetDirectories().Count -eq 0} | foreach ($_) {remove-item -LiteralPath $_.fullname}
@@ -130,14 +152,23 @@ ForEach ($file in $filelist)
     
     if ($hidden -eq "1") {
         if ($import -eq 0) { Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -WindowStyle Hidden -ArgumentList "$handargs -i `"$oldfile`" -o `"$newfile`"" }
-        else { Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -WindowStyle Hidden -ArgumentList "--preset-import-gui --preset $handpro -i `"$oldfile`" -o `"$newfile`"" }
+        else { Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -WindowStyle Hidden -ArgumentList "--preset-import-gui --preset $profile -i `"$oldfile`" -o `"$newfile`"" }
         }
     else {
         if ($import -eq 0) { Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -ArgumentList "$handargs -i `"$oldfile`" -o `"$newfile`"" }
-        else { Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -ArgumentList "--preset-import-gui --preset $handpro -i `"$oldfile`" -o `"$newfile`"" }
+        else { Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -ArgumentList "--preset-import-gui --preset $profile -i `"$oldfile`" -o `"$newfile`"" }
         }
     
     Start-Sleep -s 1
+
+    if ($notifications -eq 1) {
+        $count = "$i" + "/" + "$filecount"
+        $dec = $i / ($filecount + 1)
+        $perc = "{0:p0}" -f $dec
+        $bar = New-BTProgressBar -Status "Encoding episode $count" -Indeterminate -ValueDisplay $perc
+        if ($filecount -eq 1) { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Thing", “I’m processing it now” -ProgressBar $bar -UniqueIdentifier "$uid" -AppLogo P:\Downloads\Shows\Scripts\icon2.png }
+        else { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Things", “I’m processing them now” -ProgressBar $bar -UniqueIdentifier "$uid" -AppLogo P:\Downloads\Shows\Scripts\icon2.png }
+    }
 
     if ($changeaffinity -eq 1) { $affinity=Get-Process HandBrakeCLI
     $affinity.ProcessorAffinity=$decimal }
@@ -173,5 +204,7 @@ if ($sonarr -eq 1){
 remove-item -LiteralPath $lockdest\running.lock -Force
 Get-ChildItem $sourcefolder -Recurse | Where-Object -FilterScript {$_.PSIsContainer -eq $True} | Where-Object -FilterScript {($_.GetFiles().Count -eq 0) -and $_.GetDirectories().Count -eq 0} | foreach ($_) {remove-item $_.fullname}
 Get-ChildItem $sourcefolder -Recurse | Where-Object -FilterScript {$_.PSIsContainer -eq $True} | Where-Object -FilterScript {($_.GetFiles().Count -eq 0) -and $_.GetDirectories().Count -eq 0} | foreach ($_) {remove-item $_.fullname}
+
+if ($notifications -eq 1){ New-BurntToastNotification -Header $noth2 -text "Finished Processing $filecount Files" -UniqueIdentifier "$uid"}
 
 if ($clrrcl -eq 1) { Clear-RecycleBin -Confirm:$False }
