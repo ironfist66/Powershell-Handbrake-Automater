@@ -51,9 +51,10 @@ Set these to 1 to enable the feature. 0 will disable it
 ```$remold``` - remove source files after re-encode has completed  
 ```$clrrcl``` - clear recycle bin after script has finished  
 ```$sonarr``` - enable sonarr episode scan after script has finished  
-```$changeaffinity``` - change the processor affinity for handbrake CLI  
+```$changeaffinity``` - change the processor affinity for handbrake CLI whilst running  
 ```$import``` - import handbrake GUI profile. This overrides the $handargs variable  
 ```$hidden``` - hide the handbrake CLI window when re-encoding files  
+```$notifications``` - enable Windows 10 toast notifications for progress of current job
 
 </p>
 </details>
@@ -71,7 +72,7 @@ For use with `$changeaffinity`
    ``$decimal`` - choose which threads to use for the above
 
 For use with `$import`  
-   ``$handpro`` - name of the handbrake GUI profile  
+   ``$profile`` - name of the handbrake GUI profile  
 	
 </p>
 </details>
