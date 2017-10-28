@@ -15,7 +15,7 @@
 
 $sourcefolder = "C:\YOUR\SOURCE\FOLDER\HERE"
 $destinationfolder = "C:\YOUR\OUTPUT\FOLDER\HERE"
-$destinationlog = "C:\YOUR\LOGFILE\HERE.txt"
+$logfolder = "C:\YOUR\LOGFILE\FOLDER\HERE"
 
 $lockdest = "C:\YOUR\LOCK\FILE\HERE" # <----- This is where the .lock files go that allow the script to see if it is already running or encoding
 
@@ -26,7 +26,7 @@ $clrrcl = 0 # <-------------- set to 1 to clear recycle bin after script finishe
 $sonarr = "0" # <------------ set this to 1 if you want sonarr to search for content after conversion then set the relevant fields below.
 
 $sonarrURL = "http://localhost:8989"
-$sonarrAPI = "YOUR API HERE"
+$sonarrAPI = "YOUR API KEY HERE"
 
 $changeaffinity = 0 # <------ if you want to change the affinity of handbrakeCLI set this to 1 and change the decimal values below
 $decimal = 255 # <----------- decimal values available via google or here: https://stackoverflow.com/questions/19187241/change-affinity-of-process-with-windows-script
@@ -67,22 +67,36 @@ if ($notifications -eq 1){
     if ((Test-Path "C:\Program Files\WindowsPowerShell\Modules\BurntToast") -eq $false){ Install-Module Burnttoast }
     }
 
+if ($sourcefolder -eq $destinationfolder){ 
+    [System.Reflection.Assembly]::LoadWithPartialName(“System.Windows.Forms”)
+    [Windows.Forms.MessageBox]::Show(“Source and destination folders cannot be the same!”, “Check File Path Variables", [Windows.Forms.MessageBoxButtons]::OK, [Windows.Forms.MessageBoxIcon]::Error)
+    Exit
+    }
 
 if ((Test-Path $lockdest\running.lock) -eq $false){New-Item $lockdest\running.lock -type file} else { exit }
 
-$excluded = @("*.mp4", "*.mkv", "*.avi", "*.mpeg4", "*.ts", "*.!ut")
-Get-ChildItem $sourcefolder\* -Exclude $excluded -Recurse | where { ! $_.PSIsContainer } | foreach ($_) {Remove-Item -LiteralPath $_.FullName -Force}
-Get-ChildItem $sourcefolder -Filter "RARBG.mp4" -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.FullName -Force}
+if ($remold -eq 1){
+    $excluded = @("*.mp4", "*.mkv", "*.avi", "*.mpeg4", "*.ts", "*.!ut", "encoding.log")
+    Get-ChildItem $sourcefolder\* -Exclude $excluded -Recurse | where { ! $_.PSIsContainer } | foreach ($_) {Remove-Item -LiteralPath $_.FullName -Force}
+    Get-ChildItem $sourcefolder -Filter "RARBG.mp4" -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.FullName -Force}
+    }
 
-if ($recursive -eq 1) { $filelist = Get-ChildItem $sourcefolder -Filter *.* -Recurse -Exclude "*In Progress*", "*!ut*" | where { ! $_.PSIsContainer } | Where {$_.FullName -notlike "*\In Progress\*"}
-$num = $filelist | measure
-$filecount = $num.count }
-else { $filelist = Get-ChildItem $sourcefolder -Filter *.* -Exclude "*In Progress*", "*!ut*" | where { ! $_.PSIsContainer } | Where {$_.FullName -notlike "*\In Progress\*"}
-$num = $filelist | measure
-$filecount = $num.count }
+$included = @("*.mp4", "*.mkv", "*.avi", "*.mpeg4", "*.ts")
+$excluded = @("RARBG.mp4", "*sample*")
+$previous = @(get-content -path $logfolder\previouslycompleted.log)
+if ($recursive -eq 1) { 
+    $filelist = Get-ChildItem $sourcefolder -Recurse -Include $included -Exclude $excluded, $previous | where { ! $_.PSIsContainer } | Where {$_.FullName -notlike "*\In Progress\*" -and $_.FullName -notlike "*\Delayed\*"} 
+    }
+else { 
+    $filelist = Get-ChildItem $sourcefolder -Include $included -Exclude $excluded, $previous | where { ! $_.PSIsContainer } | Where {$_.FullName -notlike "*\In Progress\*" -and $_.FullName -notlike "*\Delayed\*"}
+    }
 
-if ($num.count -eq "0"){ remove-item -LiteralPath $lockdest\running.lock -Force
-Exit }
+$num = $filelist | measure
+$filecount = $num.count 
+
+if ($num.count -eq "0"){ 
+    remove-item -LiteralPath $lockdest\running.lock -Force
+    Exit }
 
 $noth1 = New-BTHeader -Id 000123 -Title "New Content!"
 $noth2 = New-BTHeader -Id 000123 -Title "Complete"
@@ -107,16 +121,27 @@ ForEach ($file in $filelist)
     New-Item $progressfolder -type Directory
 
     $movefile = $file.DirectoryName + "\" + $file.BaseName + $file.Extension;
-    Move-Item -literalpath $movefile -Destination $progressfolder
+    
+    if ($remold -eq 1){Move-Item -literalpath $movefile -Destination $progressfolder}
+    else {Copy-Item -literalpath $movefile -Destination $progressfolder}
     
     if ($notifications -eq 1) {
-        $count = "$i" + "/" + "$filecount"
-        $dec = $i / ($filecount + 1)
-        $perc = "{0:p0}" -f $dec
-        $bar = New-BTProgressBar -Status "Moving file $count" -Indeterminate -ValueDisplay $perc
-        if ($filecount -eq 1) { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Thing", “Moving it...” -ProgressBar $bar -UniqueIdentifier "$uid" }
-        else { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Things", “Moving them...” -ProgressBar $bar -UniqueIdentifier "$uid" -AppLogo }
-        } 
+        if ($remold -eq 1){
+            $count = "$i" + "/" + "$filecount"
+            $dec = $i / ($filecount + 1)
+            $perc = "{0:p0}" -f $dec
+            $bar = New-BTProgressBar -Status "Moving file $count" -Indeterminate -ValueDisplay $perc
+            if ($filecount -eq 1) { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Thing", “Moving it...” -ProgressBar $bar -UniqueIdentifier "$uid" }
+            else { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Things", “Moving them...” -ProgressBar $bar -UniqueIdentifier "$uid" -AppLogo }
+            }
+        else {
+            $count = "$i" + "/" + "$filecount"
+            $dec = $i / ($filecount + 1)
+            $perc = "{0:p0}" -f $dec
+            $bar = New-BTProgressBar -Status "Moving file $count" -Indeterminate -ValueDisplay $perc
+            if ($filecount -eq 1) { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Thing", “Copying it...” -ProgressBar $bar -UniqueIdentifier "$uid" }
+            else { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Things", “Copying them...” -ProgressBar $bar -UniqueIdentifier "$uid" -AppLogo }
+            }
 }
 
 Get-ChildItem $sourcefolder -Recurse | Where-Object -FilterScript {$_.PSIsContainer -eq $True} | Where-Object -FilterScript {($_.GetFiles().Count -eq 0) -and $_.GetDirectories().Count -eq 0} | foreach ($_) {remove-item -LiteralPath $_.fullname}
@@ -146,9 +171,9 @@ ForEach ($file in $filelist)
     $output1 = "-------------------------------------------------------------------------------"
     $output2 = "Handbrake Automated Encoding `r`n"
     $output3 = "$date `| Processing:    `| $oldfilebase"
-    $output1 | Out-File -Append $destinationlog
-    $output2 | Out-File -Append $destinationlog
-    $output3 | Out-File -Append $destinationlog
+    $output1 | Out-File -Append $logfolder\encoded.log
+    $output2 | Out-File -Append $logfolder\encoded.log
+    $output3 | Out-File -Append $logfolder\encoded.log
     
     if ($hidden -eq "1") {
         if ($import -eq 0) { Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -WindowStyle Hidden -ArgumentList "$handargs -i `"$oldfile`" -o `"$newfile`"" }
@@ -177,11 +202,13 @@ ForEach ($file in $filelist)
     
     $date = Get-Date
     $output5 = "$date `| Finished:      `| $newfile"
-    $output5 | Out-File -Append $destinationlog
+    $output5 | Out-File -Append $logfolder\encoded.log
     
-    if ($remold -eq 1) { Remove-Item -LiteralPath "$oldfile" -force
+    Remove-Item -LiteralPath "$oldfile" -force
     $output6 = "                    `| Deleted File:  `| $oldfile `r`n"
-    $output6 | Out-File -Append $destinationlog }
+    $output6 | Out-File -Append $logfolder\encoded.log
+
+    $oldfilebase | Out-File -Append $logfolder\previouslycompleted.log
     
     remove-item -LiteralPath $lockdest\encoding.lock -Force
 }
