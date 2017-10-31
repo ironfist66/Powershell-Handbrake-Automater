@@ -5,15 +5,22 @@ This is a script I created to automate re-encoding tasks before being picked up 
 It can also be used without the sonarr integration if the sonarr option is set to 0
 
 
-The script will automatically find files in the source folder, remove .nfo .txt and image files and move the grabbed files to a new 'In Progress' folder.  
-This folder is picked up again by the script and passed one by one in to the handbrake CLI.
+The script will automatically find files in the source folder, (optionally) remove .nfo .txt and image files and then move/copy the grabbed files to a new 'In Progress' folder.  
+This folder is picked up again by the script and passed one by one in to the handbrake CLI using arguments you set.
+You can set it to either remove the source files or keep them intact for future use, and a log allows the script to exclude previosuly completed files. 
 
 
-Upon completion all empty directories including the 'In Progress' directory are removed.
+Upon completion of all jobs, all empty directories including the 'In Progress' directory are removed to keep things tidy.
+
+
+It also has the ability to show notifications based on it's progress through whichever files have been picked up.
 
 
 Sonarr is then told to do an episode scan for each of the new files in the output directory.  
 This was set up to work without the use of the drone factory so that when the drone factory is removed from sonarr the script will still work.
+
+
+The next update will be to add some error handling in the case that handbrakeCLI.exe stops working mid-way through a job.
 
 
 ## Handbrake Argument and Configuration ##
