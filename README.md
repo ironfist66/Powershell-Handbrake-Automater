@@ -1,4 +1,4 @@
-# HandBrakeCLI-Auto
+# Handbrake Automater
 
 
 This is a script I created to automate re-encoding tasks before being picked up by sonarr.  
