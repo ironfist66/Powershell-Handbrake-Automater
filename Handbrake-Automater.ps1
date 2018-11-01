@@ -65,13 +65,13 @@ $notifications = 0 # <------- Set this to 1 to enable Windows 10 Toast Notificat
 
 if ($notifications -eq 1){
     if ((Test-Path "C:\Program Files\WindowsPowerShell\Modules\BurntToast") -eq $false){ Install-Module Burnttoast }
-    }
+}
 
 if ($sourcefolder -eq $destinationfolder){ 
-    [System.Reflection.Assembly]::LoadWithPartialName(“System.Windows.Forms”)
-    [Windows.Forms.MessageBox]::Show(“Source and destination folders cannot be the same!”, “Check File Path Variables", [Windows.Forms.MessageBoxButtons]::OK, [Windows.Forms.MessageBoxIcon]::Error)
+    [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
+    [Windows.Forms.MessageBox]::Show("Source and destination folders cannot be the same!", "Check File Path Variables", [Windows.Forms.MessageBoxButtons]::OK, [Windows.Forms.MessageBoxIcon]::Error)
     Exit
-    }
+}
 
 if ((Test-Path $lockdest\running.lock) -eq $false){New-Item $lockdest\running.lock -type file} else { exit }
 
@@ -79,24 +79,25 @@ if ($remold -eq 1){
     $excluded = @("*.mp4", "*.mkv", "*.avi", "*.mpeg4", "*.ts", "*.!ut", "encoding.log")
     Get-ChildItem $sourcefolder\* -Exclude $excluded -Recurse | where { ! $_.PSIsContainer } | foreach ($_) {Remove-Item -LiteralPath $_.FullName -Force}
     Get-ChildItem $sourcefolder -Filter "RARBG.mp4" -Recurse | foreach ($_) {Remove-Item -LiteralPath $_.FullName -Force}
-    }
+}
 
 $included = @("*.mp4", "*.mkv", "*.avi", "*.mpeg4", "*.ts")
 $excluded = @("RARBG.mp4", "*sample*")
 $previous = @(get-content -path $logfolder\previouslycompleted.log)
 if ($recursive -eq 1) { 
     $filelist = Get-ChildItem $sourcefolder -Recurse -Include $included -Exclude $excluded, $previous | where { ! $_.PSIsContainer } | Where {$_.FullName -notlike "*\In Progress\*" -and $_.FullName -notlike "*\Delayed\*"} 
-    }
+}
 else { 
     $filelist = Get-ChildItem $sourcefolder -Include $included -Exclude $excluded, $previous | where { ! $_.PSIsContainer } | Where {$_.FullName -notlike "*\In Progress\*" -and $_.FullName -notlike "*\Delayed\*"}
-    }
+}
 
 $num = $filelist | measure
 $filecount = $num.count 
 
 if ($num.count -eq "0"){ 
     remove-item -LiteralPath $lockdest\running.lock -Force
-    Exit }
+    Exit 
+}
 
 $noth1 = New-BTHeader -Id 000123 -Title "New Content!"
 $noth2 = New-BTHeader -Id 000123 -Title "Complete"
@@ -131,17 +132,18 @@ ForEach ($file in $filelist)
             $dec = $i / ($filecount + 1)
             $perc = "{0:p0}" -f $dec
             $bar = New-BTProgressBar -Status "Moving file $count" -Indeterminate -ValueDisplay $perc
-            if ($filecount -eq 1) { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Thing", “Moving it...” -ProgressBar $bar -UniqueIdentifier "$uid" }
-            else { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Things", “Moving them...” -ProgressBar $bar -UniqueIdentifier "$uid" -AppLogo }
-            }
+            if ($filecount -eq 1) { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Thing", "Moving it..." -ProgressBar $bar -UniqueIdentifier "$uid" }
+            else { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Things", "Moving them..." -ProgressBar $bar -UniqueIdentifier "$uid" -AppLogo }
+        }
         else {
             $count = "$i" + "/" + "$filecount"
             $dec = $i / ($filecount + 1)
             $perc = "{0:p0}" -f $dec
             $bar = New-BTProgressBar -Status "Moving file $count" -Indeterminate -ValueDisplay $perc
-            if ($filecount -eq 1) { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Thing", “Copying it...” -ProgressBar $bar -UniqueIdentifier "$uid" }
-            else { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Things", “Copying them...” -ProgressBar $bar -UniqueIdentifier "$uid" -AppLogo }
-            }
+            if ($filecount -eq 1) { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Thing", "Copying it..." -ProgressBar $bar -UniqueIdentifier "$uid" }
+            else { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Things", "Copying them..." -ProgressBar $bar -UniqueIdentifier "$uid" -AppLogo }
+        }
+    }
 }
 
 Get-ChildItem $sourcefolder -Recurse | Where-Object -FilterScript {$_.PSIsContainer -eq $True} | Where-Object -FilterScript {($_.GetFiles().Count -eq 0) -and $_.GetDirectories().Count -eq 0} | foreach ($_) {remove-item -LiteralPath $_.fullname}
@@ -158,7 +160,7 @@ ForEach ($file in $filelist)
     $i++;
 
     do { $randomtime = Get-Random -Minimum 10 -Maximum 2000
-    Start-Sleep -m $randomtime } 
+    Start-Sleep -m $randomtime }
     until ((Test-Path $lockdest\encoding.lock) -eq $false)
 
     New-Item $lockdest\encoding.lock -type file
@@ -178,11 +180,11 @@ ForEach ($file in $filelist)
     if ($hidden -eq "1") {
         if ($import -eq 0) { Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -WindowStyle Hidden -ArgumentList "$handargs -i `"$oldfile`" -o `"$newfile`"" }
         else { Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -WindowStyle Hidden -ArgumentList "--preset-import-gui --preset $profile -i `"$oldfile`" -o `"$newfile`"" }
-        }
+    }
     else {
         if ($import -eq 0) { Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -ArgumentList "$handargs -i `"$oldfile`" -o `"$newfile`"" }
         else { Start-Process "C:\Program Files\HandBrake\HandBrakeCLI.exe" -ArgumentList "--preset-import-gui --preset $profile -i `"$oldfile`" -o `"$newfile`"" }
-        }
+    }
     
     Start-Sleep -s 1
 
@@ -191,8 +193,8 @@ ForEach ($file in $filelist)
         $dec = $i / ($filecount + 1)
         $perc = "{0:p0}" -f $dec
         $bar = New-BTProgressBar -Status "Encoding episode $count" -Indeterminate -ValueDisplay $perc
-        if ($filecount -eq 1) { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Thing", “I’m processing it now” -ProgressBar $bar -UniqueIdentifier "$uid" -AppLogo P:\Downloads\Shows\Scripts\icon2.png }
-        else { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Things", “I’m processing them now” -ProgressBar $bar -UniqueIdentifier "$uid" -AppLogo P:\Downloads\Shows\Scripts\icon2.png }
+        if ($filecount -eq 1) { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Thing", "I’m processing it now" -ProgressBar $bar -UniqueIdentifier "$uid" -AppLogo P:\Downloads\Shows\Scripts\icon2.png }
+        else { New-BurntToastNotification -Header $noth1 -Text "Found $filecount New Things", "I’m processing them now" -ProgressBar $bar -UniqueIdentifier "$uid" -AppLogo P:\Downloads\Shows\Scripts\icon2.png }
     }
 
     if ($changeaffinity -eq 1) { $affinity=Get-Process HandBrakeCLI
@@ -222,7 +224,7 @@ if ($sonarr -eq 1){
         $json1 = "{ ""name"": ""downloadedepisodesscan"",""path"": """
         $json2 = """}"
         $encoded = $file.DirectoryName + "\" + $file.BaseName + $file.Extension;
-        $escaped = $encoded.replace ('\','\\')
+        $escaped = $encoded.replace('\','\\')
         $jsoncomplete = $json1 + $escaped + $json2
         Invoke-RestMethod -Uri $url -Method Post -Body $jsoncomplete -Headers @{"X-Api-Key"="$sonarrAPI"}
     }
